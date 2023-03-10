@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS token_categories;
+DROP TABLE IF EXISTS collections;
