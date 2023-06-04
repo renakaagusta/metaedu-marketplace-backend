@@ -1,0 +1,9 @@
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS collections;
+DROP TABLE IF EXISTS fractions;
+DROP TABLE IF EXISTS ownerships;
+DROP TABLE IF EXISTS rentals;
+DROP TABLE IF EXISTS tokens;
+DROP TABLE IF EXISTS token_categories;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS collections;
