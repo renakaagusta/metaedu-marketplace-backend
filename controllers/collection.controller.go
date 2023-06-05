@@ -167,6 +167,7 @@ func (ac *CollectionController) InsertCollection(ctx *gin.Context) {
 }
 
 func (ac *CollectionController) GetCollectionList(ctx *gin.Context) {
+	keyword := ctx.DefaultQuery("keyword", "")
 	limit, err := strconv.Atoi(ctx.DefaultQuery("limit", "25"))
 
 	if err != nil {
@@ -222,7 +223,7 @@ func (ac *CollectionController) GetCollectionList(ctx *gin.Context) {
 		return
 	}
 
-	collections, err = ac.repository.GetCollectionList(offset, limit, status, creatorID, &status, orderBy, orderOption)
+	collections, err = ac.repository.GetCollectionList(offset, limit, keyword, creatorID, &status, orderBy, orderOption)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "failed", "error": err.Error()})

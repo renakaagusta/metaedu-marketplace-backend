@@ -40,7 +40,7 @@ func (r *CollectionRepository) InsertCollection(collection models.Collection) (s
 
 	var id string
 
-	err := r.db.QueryRow(sqlStatement, collection.PreviousID, collection.Thumbnail, collection.Cover, collection.Title, collection.Views, collection.NumberOfItems, collection.NumberOfTransactions, collection.VolumeTransactions, collection.Description, collection.CategoryID, collection.CreatorID, collection.Status, collection.UpdatedAt, collection.CreatedAt).Scan(&id)
+	err := r.db.QueryRow(sqlStatement, collection.PreviousID, collection.Thumbnail, collection.Cover, collection.Title, collection.Views, collection.NumberOfItems, collection.NumberOfTransactions, collection.VolumeTransactions, collection.Description, collection.CategoryID, collection.CreatorID, collection.Status, collection.TransactionHash, collection.UpdatedAt, collection.CreatedAt).Scan(&id)
 
 	if err != nil {
 		return id, err
