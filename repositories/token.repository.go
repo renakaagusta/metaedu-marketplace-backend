@@ -94,7 +94,11 @@ func (r *TokenRepository) GetTokenList(offset int, limit int, keyword string, ca
 func (r *TokenRepository) GetLastTokenIndex() (int, error) {
 	var tokenIndex int
 
-	sqlStatement := `SELECT token_index FROM tokens ORDER BY token_index DESC LIMIT 1`
+	sqlStatement := `SELECT token_index 
+					FROM tokens 
+					WHERE status='active'
+					ORDER BY token_index 
+					DESC LIMIT 1`
 
 	rows, err := r.db.Query(sqlStatement)
 
