@@ -113,12 +113,40 @@ func (r *CollectionRepository) GetCollectionData(id uuid.UUID) (models.Collectio
 	return collection, nil
 }
 
+func (r *CollectionRepository) GetPendingCollectionData(previousID uuid.UUID) (models.Collection, error) {
+	sqlStatement := `SELECT collections.id, collections.previous_id, collections.thumbnail, collections.cover, collections.title, collections.views, collections.number_of_items, collections.number_of_transactions, collections.volume_transactions, collections.description, collections.creator_id, collections.category_id, collections.status, collections.transaction_hash, collections.updated_at, collections.created_at,
+					users.id, users.name, users.email, users.photo, users.role, users.address	
+					FROM collections 
+					INNER JOIN users ON collections.creator_id = users.id
+					WHERE collections.previous_id = $1`
+
+	var collection models.Collection
+	rows, err := r.db.Query(sqlStatement, previousID)
+
+	if err != nil {
+		return collection, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		err = rows.Scan(&collection.ID, &collection.PreviousID, &collection.Thumbnail, &collection.Cover, &collection.Title, &collection.Views, &collection.NumberOfItems, &collection.NumberOfTransactions, &collection.VolumeTransactions, &collection.Description, &collection.CreatorID, &collection.CategoryID, &collection.Status, &collection.TransactionHash, &collection.UpdatedAt, &collection.CreatedAt,
+			&collection.Creator.ID, &collection.Creator.Name, &collection.Creator.Email, &collection.Creator.Photo, &collection.Creator.Role, &collection.Creator.Address)
+
+		if err != nil {
+			return collection, err
+		}
+	}
+
+	return collection, nil
+}
+
 func (r *CollectionRepository) UpdateCollection(id uuid.UUID, collection models.Collection) error {
 	sqlStatement := `UPDATE collections
-	SET thumbnail = $2, cover = $3, title = $4, views = $5, number_of_items = $6, number_of_transactions = $7, volume_transactions = $8, description = $9, category_id = $10, creator_id = $11, status = $12, updated_at = $13
+	SET thumbnail = $2, cover = $3, title = $4, views = $5, number_of_items = $6, number_of_transactions = $7, volume_transactions = $8, description = $9, category_id = $10, creator_id = $11, status = $12, transaction_hash = $13, updated_at = $14
 	WHERE id = $1;`
 
-	_, err := r.db.Exec(sqlStatement, id, collection.Thumbnail, collection.Cover, collection.Title, collection.Views, collection.NumberOfItems, collection.NumberOfTransactions, collection.VolumeTransactions, collection.Description, collection.CategoryID, collection.CreatorID, collection.Status, collection.UpdatedAt)
+	_, err := r.db.Exec(sqlStatement, id, collection.Thumbnail, collection.Cover, collection.Title, collection.Views, collection.NumberOfItems, collection.NumberOfTransactions, collection.VolumeTransactions, collection.Description, collection.CategoryID, collection.CreatorID, collection.Status, collection.TransactionHash, collection.UpdatedAt)
 
 	if err != nil {
 		return err

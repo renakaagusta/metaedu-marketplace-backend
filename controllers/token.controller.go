@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"metaedu-marketplace/helpers"
 	models "metaedu-marketplace/models"
 	"metaedu-marketplace/repositories"
 
@@ -182,11 +183,12 @@ func (ac *TokenController) InsertToken(ctx *gin.Context) {
 			return
 		}
 
-		collection.Status = sql.NullString{String: "waiting_confirmation", Valid: true}
+		collection.PreviousID = collection.ID
 		collection.NumberOfItems = sql.NullInt64{Int64: collection.NumberOfItems.Int64 + 1, Valid: true}
+		collection.Status = sql.NullString{String: "waiting_confirmation", Valid: true}
 		collection.UpdatedAt = sql.NullTime{Time: time.Now(), Valid: true}
 
-		err = ac.collectionRepository.UpdateCollection(collectionID, collection)
+		_, err = ac.collectionRepository.InsertCollection(collection)
 
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": err})
@@ -703,6 +705,21 @@ func (ac *TokenController) UpdateToken(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": err.Error()})
 		return
+	}
+
+	// Get collection data
+	if token.CollectionID != helpers.GetEmptyUUID() {
+		collection, err := ac.collectionRepository.GetPendingCollectionData(token.CollectionID)
+
+		// Update ownership transaction hash
+		collection.TransactionHash = sql.NullString{String: transactionHash, Valid: true}
+
+		err = ac.collectionRepository.UpdateCollection(collection.ID, collection)
+
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": err.Error()})
+			return
+		}
 	}
 
 	// Remove token cache
