@@ -94,7 +94,7 @@ func (ac *FractionController) InsertFraction(ctx *gin.Context) {
 	status := "active"
 
 	// Check if token is still in rental period
-	rentals, err := ac.rentalRepository.GetRentalListByTokenID(100, 0, tokenSourceID, "created_at", "DESC", &status)
+	rentals, err := ac.rentalRepository.GetRentalList(100, 0, "", nil, nil, nil, nil, nil, nil, &tokenSourceID, &status, "created_at", "DESC")
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": err.Error()})
@@ -327,6 +327,23 @@ func (ac *FractionController) GetFractionList(ctx *gin.Context) {
 		return
 	}
 
+	keyword := ctx.DefaultQuery("keywprd", "")
+	creator := ctx.DefaultQuery("creator", "")
+	creatorIDParams := ctx.DefaultQuery("creator_id", "")
+
+	var creatorID *uuid.UUID
+
+	if creatorIDParams != "" {
+		creatorIDConversion, err := uuid.Parse(creatorIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Creator id is not valid"})
+			return
+		}
+
+		creatorID = &creatorIDConversion
+	}
+
 	orderBy := ctx.DefaultQuery("order_by", "created_at")
 	orderOption := ctx.DefaultQuery("order_option", "ASC")
 
@@ -334,7 +351,7 @@ func (ac *FractionController) GetFractionList(ctx *gin.Context) {
 
 	var fractions []models.Fraction
 
-	cacheKey := fmt.Sprintf("fraction-list-%d-%d-%s-%s-%s", offset, limit, status, orderBy, orderOption)
+	cacheKey := fmt.Sprintf("fraction-list-%d-%d-%s-%s-%s-%s-%s", offset, limit, creatorID, creator, status, orderBy, orderOption)
 	cache, err := ac.redisClient.Get(cacheKey).Result()
 
 	if err != nil && err.Error() != "redis: nil" {
@@ -354,7 +371,7 @@ func (ac *FractionController) GetFractionList(ctx *gin.Context) {
 		return
 	}
 
-	fractions, err = ac.repository.GetFractionList(offset, limit, &status, orderBy, orderOption)
+	fractions, err = ac.repository.GetFractionList(offset, limit, keyword, creatorID, &creator, &status, orderBy, orderOption)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "failed", "error": err.Error()})

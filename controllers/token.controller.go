@@ -44,7 +44,7 @@ func (ac *TokenController) InsertToken(ctx *gin.Context) {
 		return
 	}
 
-	// Validate title
+	// Validate description
 	description := ctx.PostForm("description")
 
 	if description == "" {
@@ -52,7 +52,7 @@ func (ac *TokenController) InsertToken(ctx *gin.Context) {
 		return
 	}
 
-	// Validate title
+	// Validate attributes
 	var attributes models.Attributes
 	var attributesBytes []byte
 	attributesParams := ctx.PostForm("attributes")
@@ -469,20 +469,21 @@ func (ac *TokenController) GetTokenList(ctx *gin.Context) {
 		creatorIDConversion, err := uuid.Parse(creatorIDParams)
 
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Category id is not valid"})
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Creator id is not valid"})
 			return
 		}
 
 		creatorID = &creatorIDConversion
 	}
 
+	creator := ctx.Query("creator")
 	keyword := ctx.DefaultQuery("keyword", "")
 	orderBy := ctx.DefaultQuery("order_by", "created_at")
 	orderOption := ctx.DefaultQuery("order_option", "ASC")
 
 	var tokens []models.Token
 
-	cacheKey := fmt.Sprintf("token-list-%d-%d-%s-%s-%s-%d-%d-%s-%s-%s", offset, limit, keyword, orderBy, orderOption, minPrice, maxPrice, categoryIDParams, collectionIDParams, creatorIDParams)
+	cacheKey := fmt.Sprintf("token-list-%d-%d-%s-%s-%s-%d-%d-%s-%s-%s-%s", offset, limit, keyword, orderBy, orderOption, minPrice, maxPrice, categoryIDParams, collectionIDParams, creatorIDParams, creator)
 	cache, err := ac.redisClient.Get(cacheKey).Result()
 
 	if err != nil && err.Error() != "redis: nil" {
@@ -504,7 +505,7 @@ func (ac *TokenController) GetTokenList(ctx *gin.Context) {
 
 	status := "active"
 
-	tokens, err = ac.tokenRepository.GetTokenList(offset, limit, keyword, categoryID, collectionID, creatorID, minPrice, maxPrice, &status, orderBy, orderOption)
+	tokens, err = ac.tokenRepository.GetTokenList(offset, limit, keyword, categoryID, collectionID, creatorID, &creator, minPrice, maxPrice, &status, orderBy, orderOption)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "failed", "error": err.Error()})

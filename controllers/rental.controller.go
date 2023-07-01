@@ -171,16 +171,78 @@ func (ac *RentalController) GetRentalList(ctx *gin.Context) {
 		return
 	}
 
+	user := ctx.Query("user")
 	userIDParams := ctx.DefaultQuery("user_id", "")
-	userID, err := uuid.Parse(userIDParams)
+	owner := ctx.Query("owner")
+	ownerIDParams := ctx.DefaultQuery("owner_id", "")
+	creator := ctx.DefaultQuery("creator", "")
+	creatorIDParams := ctx.DefaultQuery("creator_id", "")
+	tokenIDParams := ctx.DefaultQuery("token_id", "")
 
 	keyword := ctx.DefaultQuery("keyword", "")
 	orderBy := ctx.DefaultQuery("order_by", "created_at")
 	orderOption := ctx.DefaultQuery("order_option", "ASC")
 
+	if (userIDParams == "" && tokenIDParams == "") && (user == "" && creator == "") {
+		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "error": "User id/user/token id/creator are required"})
+		return
+	}
+
+	var userID *uuid.UUID
+
+	if userIDParams != "" {
+		userIDConversion, err := uuid.Parse(userIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "User id is not valid"})
+			return
+		}
+
+		userID = &userIDConversion
+	}
+
+	var ownerID *uuid.UUID
+
+	if ownerIDParams != "" {
+		ownerIDConversion, err := uuid.Parse(ownerIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Owner id is not valid"})
+			return
+		}
+
+		userID = &ownerIDConversion
+	}
+
+	var creatorID *uuid.UUID
+
+	if creatorIDParams != "" {
+		creatorIDConversion, err := uuid.Parse(creatorIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Creator id is not valid"})
+			return
+		}
+
+		creatorID = &creatorIDConversion
+	}
+
+	var tokenID *uuid.UUID
+
+	if tokenIDParams != "" {
+		tokenIDConversion, err := uuid.Parse(tokenIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Token id is not valid"})
+			return
+		}
+
+		tokenID = &tokenIDConversion
+	}
+
 	var rentals []models.Rental
 
-	cacheKey := fmt.Sprintf("rental-list-%d-%d-%s-%s-%s-%s", offset, limit, keyword, orderBy, orderOption, userID)
+	cacheKey := fmt.Sprintf("rental-list-%d-%d-%s-%s-%s-%s-%s-%s-%s-%s-%s-%s-%s", offset, limit, keyword, userIDParams, user, ownerIDParams, owner, creatorIDParams, creator, tokenIDParams, orderBy, orderOption, userID)
 	cache, err := ac.redisClient.Get(cacheKey).Result()
 
 	if err != nil && err.Error() != "redis: nil" {
@@ -202,11 +264,7 @@ func (ac *RentalController) GetRentalList(ctx *gin.Context) {
 
 	status := "active"
 
-	if userIDParams != "" {
-		rentals, err = ac.repository.GetRentalListByUserID(offset, limit, userID, orderBy, orderOption, &status)
-	} else {
-		rentals, err = ac.repository.GetRentalList(offset, limit, &status, orderBy, orderOption)
-	}
+	rentals, err = ac.repository.GetRentalList(offset, limit, keyword, userID, &user, ownerID, &owner, creatorID, &creator, tokenID, &status, orderBy, orderOption)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "failed", "error": err.Error()})
