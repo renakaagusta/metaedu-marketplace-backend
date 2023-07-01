@@ -43,20 +43,22 @@ func (r *RentalRepository) InsertRental(rental models.Rental) (string, error) {
 	return id, nil
 }
 
-func (r *RentalRepository) GetRentalList(offset int, limit int, status *string, orderBy string, orderOption string) ([]models.Rental, error) {
+func (r *RentalRepository) GetRentalList(offset int, limit int, keyword string, userID *uuid.UUID, user *string, ownerID *uuid.UUID, owner *string, creatorID *uuid.UUID, creator *string, tokenID *uuid.UUID, status *string, orderBy string, orderOption string) ([]models.Rental, error) {
 	var rentals []models.Rental
 
-	sqlStatement := `SELECT rentals.id, rentals.token_id, rentals.ownership_id, rentals.user_id, rentals.owner_id, rentals.timestamp, rentals.status, rentals.transaction_hash, rentals.updated_at, rentals.created_at, 
+	sqlStatement := `SELECT rentals.id, rentals.previous_id, rentals.token_id, rentals.ownership_id, rentals.user_id, rentals.owner_id, rentals.timestamp, rentals.status, rentals.transaction_hash, rentals.updated_at, rentals.created_at, 
 				tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
 				users.id, users.name, users.email, users.photo, users.verified, users.role, users.address
 				FROM rentals
 				INNER JOIN tokens ON rentals.token_id = tokens.id 
-				LEFT JOIN users ON rentals.user_id = users.id 
-				WHERE rentals.status = $1 OR $1 IS NULL
+				LEFT JOIN users owners ON rentals.owner_id=owners.id 
+				LEFT JOIN users users ON rentals.user_id=users.id 
+				LEFT JOIN users creators ON tokens.creator_id=creators.id 
+				WHERE LOWER(tokens.title) LIKE '%' || LOWER($1) || '%' AND (users.id = $2 OR $2 IS NULL) AND (users.address = $3 OR $3 IS NULL) AND (owners.id = $4 OR $4 IS NULL) AND (owners.address = $5 OR $5 IS NULL) AND (creators.id = $6 OR $6 IS NULL) AND (creators.address = $7 OR $7 IS NULL) AND (tokens.id = $8 OR $8 IS NULL) AND (rentals.status = $9 OR $9 IS NULL)
 				ORDER BY tokens.` + orderBy + ` ` + orderOption + ` 
-				OFFSET $2
-				LIMIT $3`
-	rows, err := r.db.Query(sqlStatement, status, offset, limit)
+				OFFSET $10
+				LIMIT $11`
+	rows, err := r.db.Query(sqlStatement, keyword, userID, user, ownerID, owner, creatorID, creator, tokenID, status, offset, limit)
 
 	if err != nil {
 		return rentals, err
@@ -65,49 +67,11 @@ func (r *RentalRepository) GetRentalList(offset int, limit int, status *string, 
 	defer rows.Close()
 	for rows.Next() {
 		var rental models.Rental
-		err = rows.Scan(&rental.ID, &rental.TokenID, &rental.OwnershipID, &rental.UserID, &rental.OwnerID, &rental.Timestamp, &rental.Status, &rental.TransactionHash, &rental.UpdatedAt, &rental.CreatedAt,
-			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
-			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address)
-		if err != nil {
-			return rentals, err
-		}
-
-		rentals = append(rentals, rental)
-	}
-
-	return rentals, nil
-}
-
-func (r *RentalRepository) GetRentalListByUserID(offset int, limit int, userID uuid.UUID, orderBy string, orderOption string, status *string) ([]models.Rental, error) {
-	var rentals []models.Rental
-
-	sqlStatement := `SELECT rentals.id, rentals.user_id, rentals.owner_id, rentals.token_id, rentals.ownership_id, rentals.timestamp, rentals.updated_at, rentals.created_at,
-	tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
-	borrower.id, borrower.name, borrower.email, borrower.photo, borrower.verified, borrower.role, borrower.address,
-	owner.id, owner.name, owner.email, owner.photo, owner.verified, owner.role, owner.address
-	FROM rentals
-	INNER JOIN tokens ON rentals.token_id=tokens.id
-	LEFT JOIN users borrower ON rentals.user_id=borrower.id
-	LEFT JOIN users owner ON rentals.owner_id=owner.id
-	WHERE rentals.user_id=$1 OR rentals.owner_id=$1 AND (rentals.status = $2 OR $2 IS NULL)
-	ORDER BY rentals.` + orderBy + ` ` + orderOption + ` 
-	OFFSET $3
-	LIMIT $4`
-
-	rows, err := r.db.Query(sqlStatement, userID, status, offset, limit)
-
-	if err != nil {
-		return rentals, err
-	}
-
-	defer rows.Close()
-	for rows.Next() {
-		var rental models.Rental
-		err = rows.Scan(&rental.ID, &rental.UserID, &rental.OwnerID, &rental.TokenID, &rental.OwnershipID, &rental.Timestamp, &rental.UpdatedAt, &rental.CreatedAt,
+		err = rows.Scan(&rental.ID, &rental.PreviousID, &rental.TokenID, &rental.OwnershipID, &rental.UserID, &rental.OwnerID, &rental.Timestamp, &rental.Status, &rental.TransactionHash, &rental.UpdatedAt, &rental.CreatedAt,
 			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
 			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address,
-			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address)
-
+			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address,
+			&rental.Token.Creator.ID, &rental.Token.Creator.Name, &rental.Token.Creator.Email, &rental.Token.Creator.Photo, &rental.Token.Creator.Verified, &rental.Token.Creator.Role, &rental.Token.Creator.Address)
 		if err != nil {
 			return rentals, err
 		}
@@ -118,45 +82,85 @@ func (r *RentalRepository) GetRentalListByUserID(offset int, limit int, userID u
 	return rentals, nil
 }
 
-func (r *RentalRepository) GetRentalListByTokenID(offset int, limit int, tokenID uuid.UUID, orderBy string, orderOption string, status *string) ([]models.Rental, error) {
-	var rentals []models.Rental
+// func (r *RentalRepository) GetRentalListByUserID(offset int, limit int, userID uuid.UUID, orderBy string, orderOption string, status *string) ([]models.Rental, error) {
+// 	var rentals []models.Rental
 
-	sqlStatement := `SELECT rentals.id, rentals.user_id, rentals.owner_id, rentals.token_id, rentals.ownership_id, rentals.timestamp, rentals.updated_at, rentals.created_at,
-	tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
-	borrower.id, borrower.name, borrower.email, borrower.photo, borrower.verified, borrower.role, borrower.address,
-	owner.id, owner.name, owner.email, owner.photo, owner.verified, owner.role, owner.address
-	FROM rentals
-	INNER JOIN tokens ON rentals.token_id=tokens.id
-	LEFT JOIN users borrower ON rentals.user_id=borrower.id
-	LEFT JOIN users owner ON rentals.owner_id=owner.id
-	WHERE rentals.user_id=$1 OR rentals.owner_id=$1 AND (rentals.status = $2 OR $2 IS NULL)
-	ORDER BY rentals.` + orderBy + ` ` + orderOption + ` 
-	OFFSET $3
-	LIMIT $4`
+// 	sqlStatement := `SELECT rentals.id, rentals.user_id, rentals.owner_id, rentals.token_id, rentals.ownership_id, rentals.timestamp, rentals.updated_at, rentals.created_at,
+// 	tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
+// 	borrower.id, borrower.name, borrower.email, borrower.photo, borrower.verified, borrower.role, borrower.address,
+// 	owner.id, owner.name, owner.email, owner.photo, owner.verified, owner.role, owner.address
+// 	FROM rentals
+// 	INNER JOIN tokens ON rentals.token_id=tokens.id
+// 	LEFT JOIN users borrower ON rentals.user_id=borrower.id
+// 	LEFT JOIN users owner ON rentals.owner_id=owner.id
+// 	WHERE rentals.user_id=$1 OR rentals.owner_id=$1 AND (rentals.status = $2 OR $2 IS NULL)
+// 	ORDER BY rentals.` + orderBy + ` ` + orderOption + `
+// 	OFFSET $3
+// 	LIMIT $4`
 
-	rows, err := r.db.Query(sqlStatement, tokenID, status, offset, limit)
+// 	rows, err := r.db.Query(sqlStatement, userID, status, offset, limit)
 
-	if err != nil {
-		return rentals, err
-	}
+// 	if err != nil {
+// 		return rentals, err
+// 	}
 
-	defer rows.Close()
-	for rows.Next() {
-		var rental models.Rental
-		err = rows.Scan(&rental.ID, &rental.UserID, &rental.OwnerID, &rental.TokenID, &rental.OwnershipID, &rental.Timestamp, &rental.UpdatedAt, &rental.CreatedAt,
-			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
-			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address,
-			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address)
+// 	defer rows.Close()
+// 	for rows.Next() {
+// 		var rental models.Rental
+// 		err = rows.Scan(&rental.ID, &rental.UserID, &rental.OwnerID, &rental.TokenID, &rental.OwnershipID, &rental.Timestamp, &rental.UpdatedAt, &rental.CreatedAt,
+// 			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
+// 			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address,
+// 			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address)
 
-		if err != nil {
-			return rentals, err
-		}
+// 		if err != nil {
+// 			return rentals, err
+// 		}
 
-		rentals = append(rentals, rental)
-	}
+// 		rentals = append(rentals, rental)
+// 	}
 
-	return rentals, nil
-}
+// 	return rentals, nil
+// }
+
+// func (r *RentalRepository) GetRentalListByTokenID(offset int, limit int, tokenID uuid.UUID, orderBy string, orderOption string, status *string) ([]models.Rental, error) {
+// 	var rentals []models.Rental
+
+// 	sqlStatement := `SELECT rentals.id, rentals.user_id, rentals.owner_id, rentals.token_id, rentals.ownership_id, rentals.timestamp, rentals.updated_at, rentals.created_at,
+// 	tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
+// 	borrower.id, borrower.name, borrower.email, borrower.photo, borrower.verified, borrower.role, borrower.address,
+// 	owner.id, owner.name, owner.email, owner.photo, owner.verified, owner.role, owner.address
+// 	FROM rentals
+// 	INNER JOIN tokens ON rentals.token_id=tokens.id
+// 	LEFT JOIN users borrower ON rentals.user_id=borrower.id
+// 	LEFT JOIN users owner ON rentals.owner_id=owner.id
+// 	WHERE rentals.user_id=$1 OR rentals.owner_id=$1 AND (rentals.status = $2 OR $2 IS NULL)
+// 	ORDER BY rentals.` + orderBy + ` ` + orderOption + `
+// 	OFFSET $3
+// 	LIMIT $4`
+
+// 	rows, err := r.db.Query(sqlStatement, tokenID, status, offset, limit)
+
+// 	if err != nil {
+// 		return rentals, err
+// 	}
+
+// 	defer rows.Close()
+// 	for rows.Next() {
+// 		var rental models.Rental
+// 		err = rows.Scan(&rental.ID, &rental.UserID, &rental.OwnerID, &rental.TokenID, &rental.OwnershipID, &rental.Timestamp, &rental.UpdatedAt, &rental.CreatedAt,
+// 			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
+// 			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address,
+// 			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address)
+
+// 		if err != nil {
+// 			return rentals, err
+// 		}
+
+// 		rentals = append(rentals, rental)
+// 	}
+
+// 	return rentals, nil
+// }
 
 func (r *RentalRepository) GetRentalData(id uuid.UUID) (models.Rental, error) {
 	sqlStatement := `SELECT id, previous_id, user_id, owner_id, token_id, ownership_id, timestamp, status, transaction_hash, updated_at, created_at FROM rentals WHERE id = $1`

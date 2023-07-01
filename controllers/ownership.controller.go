@@ -180,24 +180,62 @@ func (ac *OwnershipController) GetOwnershipList(ctx *gin.Context) {
 		return
 	}
 
+	keyword := ctx.DefaultQuery("keyword", "")
+	user := ctx.DefaultQuery("user", "")
 	userIDParams := ctx.DefaultQuery("user_id", "")
+	creator := ctx.DefaultQuery("creator", "")
+	creatorIDParams := ctx.DefaultQuery("creator_id", "")
 	tokenIDParams := ctx.DefaultQuery("token_id", "")
 	orderBy := ctx.DefaultQuery("order_by", "created_at")
 	orderOption := ctx.DefaultQuery("order_option", "ASC")
 
-	userID, err := uuid.Parse(userIDParams)
-	tokenID, err := uuid.Parse(tokenIDParams)
-
-	if userIDParams == "" && tokenIDParams == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "error": "User id or token id are required"})
+	if (userIDParams == "" && tokenIDParams == "") && (user == "" && creator == "") {
+		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "error": "User id/user/token id/creator are required"})
 		return
 	}
 
-	err = nil
+	var userID *uuid.UUID
+
+	if userIDParams != "" {
+		userIDConversion, err := uuid.Parse(userIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "User id is not valid"})
+			return
+		}
+
+		userID = &userIDConversion
+	}
+
+	var creatorID *uuid.UUID
+
+	if creatorIDParams != "" {
+		creatorIDConversion, err := uuid.Parse(creatorIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Creator id is not valid"})
+			return
+		}
+
+		creatorID = &creatorIDConversion
+	}
+
+	var tokenID *uuid.UUID
+
+	if tokenIDParams != "" {
+		tokenIDConversion, err := uuid.Parse(tokenIDParams)
+
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Token id is not valid"})
+			return
+		}
+
+		tokenID = &tokenIDConversion
+	}
 
 	var ownerships []models.Ownership
 
-	cacheKey := fmt.Sprintf("ownership-list-%d-%d-%s-%s-%s-%s", offset, limit, userIDParams, tokenIDParams, orderBy, orderOption)
+	cacheKey := fmt.Sprintf("ownership-list-%d-%d-%s-%s-%s-%s-%s-%s-%s", offset, limit, keyword, userIDParams, user, creatorIDParams, creator, tokenIDParams, orderBy, orderOption)
 	cache, err := ac.redisClient.Get(cacheKey).Result()
 
 	if err != nil && err.Error() != "redis: nil" {
@@ -217,11 +255,7 @@ func (ac *OwnershipController) GetOwnershipList(ctx *gin.Context) {
 		return
 	}
 
-	if userIDParams != "" {
-		ownerships, err = ac.repository.GetOwnershipListByUserID(offset, limit, userID, "active", orderBy, orderOption)
-	} else {
-		ownerships, err = ac.repository.GetOwnershipListByTokenID(offset, limit, tokenID, "active", orderBy, orderOption)
-	}
+	ownerships, err = ac.repository.GetOwnershipList(offset, limit, keyword, userID, &user, creatorID, &creator, tokenID, "active", orderBy, orderOption)
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "failed", "error": err.Error()})
@@ -411,7 +445,7 @@ func (ac *OwnershipController) UpdateOwnership(ctx *gin.Context) {
 	status := "active"
 
 	// Check if token is still in rental period
-	rentals, err := ac.rentalRepository.GetRentalListByTokenID(100, 0, tokenID, "created_at", "DESC", &status)
+	rentals, err := ac.rentalRepository.GetRentalList(100, 0, "", nil, nil, nil, nil, nil, nil, &tokenID, &status, "created_at", "DESC")
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": err.Error()})

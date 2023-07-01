@@ -54,22 +54,22 @@ func (r *TokenRepository) InsertToken(token models.Token, attributesBytes []byte
 	return token, nil
 }
 
-func (r *TokenRepository) GetTokenList(offset int, limit int, keyword string, category *uuid.UUID, collection *uuid.UUID, creator *uuid.UUID, minPrice int, maxPrice int, status *string, orderBy string, orderOption string) ([]models.Token, error) {
+func (r *TokenRepository) GetTokenList(offset int, limit int, keyword string, category *uuid.UUID, collection *uuid.UUID, creatorID *uuid.UUID, creator *string, minPrice int, maxPrice int, status *string, orderBy string, orderOption string) ([]models.Token, error) {
 	var tokens []models.Token
 
 	sqlStatement := `SELECT tokens.id, tokens.previous_id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.source_id, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price, tokens.views, tokens.number_of_transactions, tokens.volume_transactions, tokens.creator_id, tokens.attributes, tokens.status, tokens.transaction_hash, tokens.updated_at, tokens.created_at,
 					users.id, users.name, users.email, users.photo, users.role, users.address	
 					FROM tokens 
 					INNER JOIN users ON tokens.creator_id=users.id
-					WHERE LOWER(tokens.title) LIKE '%' || LOWER($1) || '%' AND (tokens.category_id = $2 OR $2 IS NULL) AND (tokens.collection_id = $3 OR $3 IS NULL) AND (tokens.creator_id = $4 OR $4 IS NULL) AND tokens.status=$5 AND tokens.last_price >= $6 AND tokens.last_price <= $7
+					WHERE LOWER(tokens.title) LIKE '%' || LOWER($1) || '%' AND (tokens.category_id = $2 OR $2 IS NULL) AND (tokens.collection_id = $3 OR $3 IS NULL) AND (tokens.creator_id = $4 OR $4 IS NULL) AND (users.address = $5 OR $5 IS NULL) AND tokens.status=$6 AND tokens.last_price >= $7 AND tokens.last_price <= $8
 					ORDER BY tokens.` + orderBy + ` ` + orderOption + `
-					OFFSET $8
-					LIMIT $9`
+					OFFSET $9
+					LIMIT $10`
 
 	var rows *sql.Rows
 	var err error
 
-	rows, err = r.db.Query(sqlStatement, keyword, helpers.GetOptionalUUIDParams(category), helpers.GetOptionalUUIDParams(collection), helpers.GetOptionalUUIDParams(creator), status, minPrice, maxPrice, offset, limit)
+	rows, err = r.db.Query(sqlStatement, keyword, helpers.GetOptionalUUIDParams(category), helpers.GetOptionalUUIDParams(collection), helpers.GetOptionalUUIDParams(creatorID), helpers.GetOptionalStringParams(creator), status, minPrice, maxPrice, offset, limit)
 
 	if err != nil {
 		return tokens, err

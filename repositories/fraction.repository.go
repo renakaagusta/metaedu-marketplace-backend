@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	"metaedu-marketplace/helpers"
 	models "metaedu-marketplace/models"
 
 	"github.com/google/uuid"
@@ -40,17 +41,19 @@ func (r *FractionRepository) InsertFraction(fraction models.Fraction) (string, e
 	return id, nil
 }
 
-func (r *FractionRepository) GetFractionList(offset int, limit int, status *string, orderBy string, orderOption string) ([]models.Fraction, error) {
+func (r *FractionRepository) GetFractionList(offset int, limit int, keyword string, creatorID *uuid.UUID, creator *string, status *string, orderBy string, orderOption string) ([]models.Fraction, error) {
 	var fractions []models.Fraction
 
-	sqlStatement := `SELECT id, previous_id, token_parent_id, token_fraction_id, status, transaction_hash, updated_at, created_at 
+	sqlStatement := `SELECT fractions.id, fractions.previous_id, fractions.token_parent_id, fractions.token_fraction_id, fractions.status, fractions.transaction_hash, fractions.updated_at, fractions.created_at 
 					FROM fractions 
-					WHERE (status=$1 OR $1 IS NULL) 
+					INNER JOIN tokens ON fractions.token_parent_id=tokens.id
+					INNER JOIN users creators ON tokens.creator_id=creators.id
+					WHERE LOWER(tokens.title) LIKE '%' || LOWER($1) || '%' AND (tokens.creator_id = $2 OR $2 IS NULL) AND (creators.address = $3 OR $3 IS NULL) AND fractions.status=$4
 					ORDER BY ` + orderBy + ` ` + orderOption + ` 
-					OFFSET $2 
-					LIMIT $3`
+					OFFSET $5 
+					LIMIT $6`
 
-	rows, err := r.db.Query(sqlStatement, status, offset, limit)
+	rows, err := r.db.Query(sqlStatement, keyword, helpers.GetOptionalUUIDParams(creatorID), helpers.GetOptionalStringParams(creator), status, offset, limit)
 
 	if err != nil {
 		return fractions, err

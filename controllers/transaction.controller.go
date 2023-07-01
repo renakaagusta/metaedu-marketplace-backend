@@ -151,7 +151,7 @@ func (ac *TransactionController) InsertTransaction(ctx *gin.Context) {
 	status := "active"
 
 	// Check if token is still in rental period
-	rentals, err := ac.rentalRepository.GetRentalListByTokenID(100, 0, tokenID, "created_at", "DESC", &status)
+	rentals, err := ac.rentalRepository.GetRentalList(100, 0, "", nil, nil, nil, nil, nil, nil, &tokenID, &status, "created_at", "DESC")
 
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"status": "error", "error": err.Error()})
@@ -500,7 +500,7 @@ func (ac *TransactionController) GetTransactionList(ctx *gin.Context) {
 		collectionID, err = uuid.Parse(collectionIDParams)
 
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Token id is not valid"})
+			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Collection id is not valid"})
 			return
 		}
 	}
