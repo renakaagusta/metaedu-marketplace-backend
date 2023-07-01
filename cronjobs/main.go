@@ -39,12 +39,13 @@ func checkBlock() {
 	status := "waiting_confirmation"
 	monitoringOnly := false
 
+	var empty string = ""
+
 	// Get pending tokens
-	tokens, err := tokenRepository.GetTokenList(0, 100000000, "", nil, nil, nil, 0, 10000000000, &status, "created_at", "ASC")
+	tokens, err := tokenRepository.GetTokenList(0, 100000000, "", nil, nil, nil, &empty, 0, 10000000000, &status, "created_at", "ASC")
 
 	if err != nil {
-		fmt.Println("token")
-		fmt.Println(err)
+		fmt.Println("Error getting token list: ", err)
 		return
 	}
 
@@ -124,7 +125,7 @@ func checkBlock() {
 	}
 
 	// Get pending ownerships
-	ownerships, err := ownershipRepository.GetOwnershipList(0, 100000000, &status, "created_at", "ASC")
+	ownerships, err := ownershipRepository.GetOwnershipList(0, 100000000, "", nil, &empty, nil, &empty, nil, status, "created_at", "ASC")
 
 	if err != nil {
 		fmt.Println("ownership")
@@ -358,7 +359,7 @@ func checkBlock() {
 	}
 
 	// Get pending rentals
-	rentals, err := rentalRepository.GetRentalList(0, 100000000, &status, "created_at", "ASC")
+	rentals, err := rentalRepository.GetRentalList(0, 100000000, "", nil, &empty, nil, &empty, nil, &empty, nil, &status, "created_at", "ASC")
 
 	if err != nil {
 		fmt.Println("rental")
@@ -401,7 +402,7 @@ func checkBlock() {
 	}
 
 	// Get pending fractions
-	fractions, err := fractionRepository.GetFractionList(0, 100000000, &status, "created_at", "ASC")
+	fractions, err := fractionRepository.GetFractionList(0, 100000000, "", nil, &empty, &status, "created_at", "ASC")
 
 	if err != nil {
 		fmt.Println("fraction")
