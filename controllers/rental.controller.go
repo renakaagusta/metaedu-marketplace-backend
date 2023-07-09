@@ -184,7 +184,7 @@ func (ac *RentalController) GetRentalList(ctx *gin.Context) {
 	orderOption := ctx.DefaultQuery("order_option", "ASC")
 
 	if (userIDParams == "" && ownerIDParams == "" && ownerIDParams == "") && (user == "" && owner == "" && creator == "") {
-		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "error": "User id/user/Owner id/owner/token id/creator are required"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "error": "User id/user/owner id/owner/token id/creator are required"})
 		return
 	}
 

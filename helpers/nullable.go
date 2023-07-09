@@ -11,11 +11,11 @@ func GetOptionalUUIDParams(value *uuid.UUID) any {
 }
 
 func GetOptionalStringParams(value *string) any {
-	if *value == "" {
-		return nil
-	}
-
 	if value != nil {
+		if *value == "" {
+			return nil
+		}
+
 		return *value
 	} else {
 		return nil
