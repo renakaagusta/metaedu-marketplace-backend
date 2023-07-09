@@ -465,17 +465,34 @@ func (ac *TransactionController) GetTransactionList(ctx *gin.Context) {
 
 	// Validate user
 	userIDParams := ctx.DefaultQuery("user_id", "")
-	var userID uuid.UUID
+	var userID *uuid.UUID
 
 	if userIDParams != "" {
-		userID, err = uuid.Parse(userIDParams)
+		userIDConversion, err := uuid.Parse(userIDParams)
 
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "User id is not valid"})
 			return
 		}
+
+		userID = &userIDConversion
 	}
 
+	// creatorIDParams := ctx.DefaultQuery("creator_id", "")
+	// var creatorID *uuid.UUID
+
+	// if creatorIDParams != "" {
+	// 	creatorIDConversion, err := uuid.Parse(creatorIDParams)
+
+	// 	if err != nil {
+	// 		ctx.JSON(http.StatusBadRequest, gin.H{"status": "error", "error": "Creator id is not valid"})
+	// 		return
+	// 	}
+
+	// 	creatorID = &creatorIDConversion
+	// }
+
+	// creator := ctx.Query("creator")
 	orderBy := ctx.DefaultQuery("order_by", "created_at")
 	orderOption := ctx.DefaultQuery("order_option", "ASC")
 
@@ -534,7 +551,7 @@ func (ac *TransactionController) GetTransactionList(ctx *gin.Context) {
 	} else if collectionIDParams != "" {
 		transactions, err = ac.repository.GetTransactionListByCollection(offset, limit, collectionID, &status, orderBy, orderOption)
 	} else {
-		transactions, err = ac.repository.GetTransactionList(offset, limit, &userID, &status, orderBy, orderOption)
+		transactions, err = ac.repository.GetTransactionList(offset, limit, userID, &status, orderBy, orderOption)
 	}
 
 	if err != nil {

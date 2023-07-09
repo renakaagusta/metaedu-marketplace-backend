@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	"metaedu-marketplace/helpers"
 	models "metaedu-marketplace/models"
 
 	"github.com/google/uuid"
@@ -83,7 +84,7 @@ func (r *TransactionRepository) GetTransactionList(offset int, limit int, userID
 					OFFSET $3 
 					LIMIT $4`
 
-	rows, err := r.db.Query(sqlStatement, userID, status, offset, limit)
+	rows, err := r.db.Query(sqlStatement, helpers.GetOptionalUUIDParams(userID), status, offset, limit)
 
 	if err != nil {
 		return transactions, err
