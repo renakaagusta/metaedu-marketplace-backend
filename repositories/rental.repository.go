@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	"metaedu-marketplace/helpers"
 	models "metaedu-marketplace/models"
 
 	"github.com/google/uuid"
@@ -48,7 +49,9 @@ func (r *RentalRepository) GetRentalList(offset int, limit int, keyword string, 
 
 	sqlStatement := `SELECT rentals.id, rentals.previous_id, rentals.token_id, rentals.ownership_id, rentals.user_id, rentals.owner_id, rentals.timestamp, rentals.status, rentals.transaction_hash, rentals.updated_at, rentals.created_at, 
 				tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
-				users.id, users.name, users.email, users.photo, users.verified, users.role, users.address
+				users.id, users.name, users.email, users.photo, users.verified, users.role, users.address,
+				owners.id, owners.name, owners.email, owners.photo, owners.verified, owners.role, owners.address,
+				creators.id, creators.name, creators.email, creators.photo, creators.verified, creators.role, creators.address
 				FROM rentals
 				INNER JOIN tokens ON rentals.token_id = tokens.id 
 				LEFT JOIN users owners ON rentals.owner_id=owners.id 
@@ -58,7 +61,7 @@ func (r *RentalRepository) GetRentalList(offset int, limit int, keyword string, 
 				ORDER BY tokens.` + orderBy + ` ` + orderOption + ` 
 				OFFSET $10
 				LIMIT $11`
-	rows, err := r.db.Query(sqlStatement, keyword, userID, user, ownerID, owner, creatorID, creator, tokenID, status, offset, limit)
+	rows, err := r.db.Query(sqlStatement, keyword, helpers.GetOptionalUUIDParams(userID), helpers.GetOptionalStringParams(user), helpers.GetOptionalUUIDParams(ownerID), helpers.GetOptionalStringParams(owner), helpers.GetOptionalUUIDParams(creatorID), helpers.GetOptionalStringParams(creator), helpers.GetOptionalUUIDParams(tokenID), status, offset, limit)
 
 	if err != nil {
 		return rentals, err
@@ -81,86 +84,6 @@ func (r *RentalRepository) GetRentalList(offset int, limit int, keyword string, 
 
 	return rentals, nil
 }
-
-// func (r *RentalRepository) GetRentalListByUserID(offset int, limit int, userID uuid.UUID, orderBy string, orderOption string, status *string) ([]models.Rental, error) {
-// 	var rentals []models.Rental
-
-// 	sqlStatement := `SELECT rentals.id, rentals.user_id, rentals.owner_id, rentals.token_id, rentals.ownership_id, rentals.timestamp, rentals.updated_at, rentals.created_at,
-// 	tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
-// 	borrower.id, borrower.name, borrower.email, borrower.photo, borrower.verified, borrower.role, borrower.address,
-// 	owner.id, owner.name, owner.email, owner.photo, owner.verified, owner.role, owner.address
-// 	FROM rentals
-// 	INNER JOIN tokens ON rentals.token_id=tokens.id
-// 	LEFT JOIN users borrower ON rentals.user_id=borrower.id
-// 	LEFT JOIN users owner ON rentals.owner_id=owner.id
-// 	WHERE rentals.user_id=$1 OR rentals.owner_id=$1 AND (rentals.status = $2 OR $2 IS NULL)
-// 	ORDER BY rentals.` + orderBy + ` ` + orderOption + `
-// 	OFFSET $3
-// 	LIMIT $4`
-
-// 	rows, err := r.db.Query(sqlStatement, userID, status, offset, limit)
-
-// 	if err != nil {
-// 		return rentals, err
-// 	}
-
-// 	defer rows.Close()
-// 	for rows.Next() {
-// 		var rental models.Rental
-// 		err = rows.Scan(&rental.ID, &rental.UserID, &rental.OwnerID, &rental.TokenID, &rental.OwnershipID, &rental.Timestamp, &rental.UpdatedAt, &rental.CreatedAt,
-// 			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
-// 			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address,
-// 			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address)
-
-// 		if err != nil {
-// 			return rentals, err
-// 		}
-
-// 		rentals = append(rentals, rental)
-// 	}
-
-// 	return rentals, nil
-// }
-
-// func (r *RentalRepository) GetRentalListByTokenID(offset int, limit int, tokenID uuid.UUID, orderBy string, orderOption string, status *string) ([]models.Rental, error) {
-// 	var rentals []models.Rental
-
-// 	sqlStatement := `SELECT rentals.id, rentals.user_id, rentals.owner_id, rentals.token_id, rentals.ownership_id, rentals.timestamp, rentals.updated_at, rentals.created_at,
-// 	tokens.id, tokens.token_index, tokens.title, tokens.description, tokens.category_id, tokens.collection_id, tokens.image, tokens.uri, tokens.fraction_id, tokens.supply, tokens.last_price, tokens.initial_price,
-// 	borrower.id, borrower.name, borrower.email, borrower.photo, borrower.verified, borrower.role, borrower.address,
-// 	owner.id, owner.name, owner.email, owner.photo, owner.verified, owner.role, owner.address
-// 	FROM rentals
-// 	INNER JOIN tokens ON rentals.token_id=tokens.id
-// 	LEFT JOIN users borrower ON rentals.user_id=borrower.id
-// 	LEFT JOIN users owner ON rentals.owner_id=owner.id
-// 	WHERE rentals.user_id=$1 OR rentals.owner_id=$1 AND (rentals.status = $2 OR $2 IS NULL)
-// 	ORDER BY rentals.` + orderBy + ` ` + orderOption + `
-// 	OFFSET $3
-// 	LIMIT $4`
-
-// 	rows, err := r.db.Query(sqlStatement, tokenID, status, offset, limit)
-
-// 	if err != nil {
-// 		return rentals, err
-// 	}
-
-// 	defer rows.Close()
-// 	for rows.Next() {
-// 		var rental models.Rental
-// 		err = rows.Scan(&rental.ID, &rental.UserID, &rental.OwnerID, &rental.TokenID, &rental.OwnershipID, &rental.Timestamp, &rental.UpdatedAt, &rental.CreatedAt,
-// 			&rental.Token.ID, &rental.Token.TokenIndex, &rental.Token.Title, &rental.Token.Description, &rental.Token.CategoryID, &rental.Token.CollectionID, &rental.Token.Image, &rental.Token.Uri, &rental.Token.FractionID, &rental.Token.Supply, &rental.Token.LastPrice, &rental.Token.InitialPrice,
-// 			&rental.User.ID, &rental.User.Name, &rental.User.Email, &rental.User.Photo, &rental.User.Verified, &rental.User.Role, &rental.User.Address,
-// 			&rental.Owner.ID, &rental.Owner.Name, &rental.Owner.Email, &rental.Owner.Photo, &rental.Owner.Verified, &rental.Owner.Role, &rental.Owner.Address)
-
-// 		if err != nil {
-// 			return rentals, err
-// 		}
-
-// 		rentals = append(rentals, rental)
-// 	}
-
-// 	return rentals, nil
-// }
 
 func (r *RentalRepository) GetRentalData(id uuid.UUID) (models.Rental, error) {
 	sqlStatement := `SELECT id, previous_id, user_id, owner_id, token_id, ownership_id, timestamp, status, transaction_hash, updated_at, created_at FROM rentals WHERE id = $1`

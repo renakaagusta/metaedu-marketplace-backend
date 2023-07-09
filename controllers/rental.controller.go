@@ -211,7 +211,7 @@ func (ac *RentalController) GetRentalList(ctx *gin.Context) {
 			return
 		}
 
-		userID = &ownerIDConversion
+		ownerID = &ownerIDConversion
 	}
 
 	var creatorID *uuid.UUID

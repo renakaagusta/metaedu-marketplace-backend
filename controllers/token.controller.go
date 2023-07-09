@@ -38,6 +38,7 @@ func NewTokenController(tokenRepository *repositories.TokenRepository, ownership
 func (ac *TokenController) InsertToken(ctx *gin.Context) {
 	// Validate title
 	title := ctx.PostForm("title")
+	uploadedImage, err := ctx.FormFile("image")
 
 	if title == "" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"status": "failed", "error": "Title is required"})
@@ -68,7 +69,7 @@ func (ac *TokenController) InsertToken(ctx *gin.Context) {
 
 	// Validate image
 	var imageFileName string
-	uploadedImage, err := ctx.FormFile("image")
+	// uploadedImage, err := ctx.FormFile("image")
 
 	if err != nil {
 		uploadedImageBase64 := ctx.PostForm("image")
